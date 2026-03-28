@@ -1,9 +1,9 @@
 
-// تهئية Firebase باستخدام الإصدار الحديث (v9+)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
-import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
+// تهئية Firebase باستخدام Compat Mode
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js";
+import { getDatabase } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js";
 
 // بيانات Firebase الجديدة
 const firebaseConfig = {
@@ -28,10 +28,16 @@ const CLOUD_NAME = 'dnmpmysk6';
 const UPLOAD_PRESET = 'rsxdfdgw';
 
 // تصدير المتغيرات لاستخدامها في ملف `script.js`
-window.firebaseApp = app;
 window.auth = auth;
 window.db = db;
 window.storage = storage;
+window.ref = firebase.database.ref;
+window.set = firebase.database.set;
+window.onValue = firebase.database.onValue;
+window.get = firebase.database.get;
+window.remove = firebase.database.remove;
+window.push = firebase.database.push;
+window.update = firebase.database.update;
 window.CLOUD_NAME = CLOUD_NAME;
 window.UPLOAD_PRESET = UPLOAD_PRESET;
 
