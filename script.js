@@ -1,4 +1,7 @@
 
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
+import { ref, set, onValue, get, remove, push, update } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js";
+
 // ========== إعدادات الأدمن ==========
 const ADMIN_EMAILS = ['jasim28v@gmail.com']; // بريد الأدمن
 let isAdmin = false;
@@ -30,7 +33,7 @@ async function login() {
     if (!email || !password) { msg.innerText = 'الرجاء ملء جميع الحقول'; return; }
     msg.innerText = 'جاري تسجيل الدخول...';
     try {
-        await auth.signInWithEmailAndPassword(email, password);
+        await signInWithEmailAndPassword(auth, email, password);
         msg.innerText = '';
     } catch (error) {
         if (error.code === 'auth/user-not-found') msg.innerText = 'لا يوجد حساب';
@@ -48,8 +51,8 @@ async function register() {
     if (password.length < 6) { msg.innerText = 'كلمة المرور 6 أحرف على الأقل'; return; }
     msg.innerText = 'جاري إنشاء الحساب...';
     try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        await db.ref(`users/${userCredential.user.uid}`).set({
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await set(ref(db, `users/${userCredential.user.uid}`), {
             username, email, bio: '', avatarUrl: '', followers: {}, following: {}, totalLikes: 0, createdAt: Date.now()
         });
         msg.innerText = '';
@@ -59,7 +62,7 @@ async function register() {
     }
 }
 
-function logout() { auth.signOut(); location.reload(); }
+function logout() { signOut(auth); location.reload(); }
 
 // ========== التحقق من الأدمن ==========
 function checkAdminStatus() {
@@ -75,9 +78,9 @@ function checkAdminStatus() {
 // ========== دوال الأدمن ==========
 async function renderAdminPanel() {
     if (!isAdmin) return '';
-    const usersSnap = await db.ref('users').once('value');
+    const usersSnap = await get(ref(db, 'users'));
     const users = usersSnap.val() || {};
-    const videosSnap = await db.ref('videos').once('value');
+    const videosSnap = await get(ref(db, 'videos'));
     const videos = videosSnap.val() || {};
     const totalLikes = Object.values(videos).reduce((sum, v) => sum + (v.likes || 0), 0);
     const bannedUsers = Object.values(users).filter(u => u.banned).length;
@@ -100,21 +103,21 @@ async function renderAdminPanel() {
     `;
 }
 
-async function adminDeleteVideo(videoId) { if (!isAdmin) return; if (confirm('حذف الفيديو؟')) { await db.ref(`videos/${videoId}`).remove(); alert('✅ تم الحذف'); location.reload(); } }
-async function adminBanUser(userId) { if (!isAdmin) return; if (confirm('حظر المستخدم؟')) { await db.ref(`users/${userId}/banned`).set(true); alert('✅ تم الحظر'); location.reload(); } }
-async function adminUnbanUser(userId) { if (!isAdmin) return; if (confirm('إلغاء الحظر؟')) { await db.ref(`users/${userId}/banned`).remove(); alert('✅ تم إلغاء الحظر'); location.reload(); } }
-async function adminDeleteUser(userId) { if (!isAdmin) return; if (confirm('حذف المستخدم وجميع فيديوهاته؟')) { const videosSnap = await db.ref('videos').once('value'); const videos = videosSnap.val() || {}; Object.entries(videos).forEach(([id, v]) => { if (v.sender === userId) db.ref(`videos/${id}`).remove(); }); await db.ref(`users/${userId}`).remove(); alert('✅ تم الحذف'); location.reload(); } }
+async function adminDeleteVideo(videoId) { if (!isAdmin) return; if (confirm('حذف الفيديو؟')) { await remove(ref(db, `videos/${videoId}`)); alert('✅ تم الحذف'); location.reload(); } }
+async function adminBanUser(userId) { if (!isAdmin) return; if (confirm('حظر المستخدم؟')) { await set(ref(db, `users/${userId}/banned`), true); alert('✅ تم الحظر'); location.reload(); } }
+async function adminUnbanUser(userId) { if (!isAdmin) return; if (confirm('إلغاء الحظر؟')) { await remove(ref(db, `users/${userId}/banned`)); alert('✅ تم إلغاء الحظر'); location.reload(); } }
+async function adminDeleteUser(userId) { if (!isAdmin) return; if (confirm('حذف المستخدم وجميع فيديوهاته؟')) { const videosSnap = await get(ref(db, 'videos')); const videos = videosSnap.val() || {}; Object.entries(videos).forEach(([id, v]) => { if (v.sender === userId) remove(ref(db, `videos/${id}`)); }); await remove(ref(db, `users/${userId}`)); alert('✅ تم الحذف'); location.reload(); } }
 
 // ========== تحميل البيانات ==========
-async function loadUserData() { const snap = await db.ref(`users/${currentUser.uid}`).get(); if (snap.exists()) currentUserData = { uid: currentUser.uid, ...snap.val() }; }
-db.ref('users').on('value', s => { allUsers = s.val() || {}; });
+async function loadUserData() { const snap = await get(ref(db, `users/${currentUser.uid}`)); if (snap.exists()) currentUserData = { uid: currentUser.uid, ...snap.val() }; }
+onValue(ref(db, 'users'), (s) => { allUsers = s.val() || {}; });
 
 // ========== هاشتاقات ==========
 function addHashtags(text) { if (!text) return ''; return text.replace(/#(\w+)/g, '<span class="hashtag" onclick="searchHashtag(\'$1\')">#$1</span>'); }
 function searchHashtag(tag) { document.getElementById('searchInput').value = '#' + tag; openSearch(); searchAll(); }
 
 // ========== عرض الفيديوهات ==========
-db.ref('videos').on('value', (s) => {
+onValue(ref(db, 'videos'), (s) => {
     const data = s.val();
     if (!data) { allVideos = []; renderVideos(); return; }
     allVideos = []; allSounds = {};
@@ -162,15 +165,15 @@ function toggleGlobalMute() { isMuted = !isMuted; document.querySelectorAll('vid
 function switchFeed(feed) { currentFeed = feed; document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active')); event.target.classList.add('active'); renderVideos(); }
 
 // ========== الإعجاب ==========
-async function toggleLike(videoId, btn) { if (!currentUser) return; const videoRef = db.ref(`videos/${videoId}`); const snap = await videoRef.get(); const video = snap.val(); if (!video) return; let likes = video.likes || 0; let likedBy = video.likedBy || {}; if (likedBy[currentUser.uid]) { likes--; delete likedBy[currentUser.uid]; } else { likes++; likedBy[currentUser.uid] = true; await addNotification(video.sender, 'like', currentUser.uid); } await videoRef.update({ likes, likedBy }); btn.classList.toggle('active'); const countSpan = btn.querySelector('.count'); if (countSpan) countSpan.innerText = likes; }
+async function toggleLike(videoId, btn) { if (!currentUser) return; const videoRef = ref(db, `videos/${videoId}`); const snap = await get(videoRef); const video = snap.val(); if (!video) return; let likes = video.likes || 0; let likedBy = video.likedBy || {}; if (likedBy[currentUser.uid]) { likes--; delete likedBy[currentUser.uid]; } else { likes++; likedBy[currentUser.uid] = true; await addNotification(video.sender, 'like', currentUser.uid); } await update(videoRef, { likes, likedBy }); btn.classList.toggle('active'); const countSpan = btn.querySelector('.count'); if (countSpan) countSpan.innerText = likes; }
 
 // ========== المتابعة ==========
-async function toggleFollow(userId, btn) { if (!currentUser || currentUser.uid === userId) return; const userRef = db.ref(`users/${currentUser.uid}/following/${userId}`); const targetRef = db.ref(`users/${userId}/followers/${currentUser.uid}`); const snap = await userRef.get(); if (snap.exists()) { await userRef.remove(); await targetRef.remove(); btn.innerText = 'متابعة'; await addNotification(userId, 'unfollow', currentUser.uid); } else { await userRef.set(true); await targetRef.set(true); btn.innerText = 'متابع'; await addNotification(userId, 'follow', currentUser.uid); } if (viewingProfileUserId === userId) await loadProfileData(userId); }
+async function toggleFollow(userId, btn) { if (!currentUser || currentUser.uid === userId) return; const userRef = ref(db, `users/${currentUser.uid}/following/${userId}`); const targetRef = ref(db, `users/${userId}/followers/${currentUser.uid}`); const snap = await get(userRef); if (snap.exists()) { await remove(userRef); await remove(targetRef); btn.innerText = 'متابعة'; await addNotification(userId, 'unfollow', currentUser.uid); } else { await set(userRef, true); await set(targetRef, true); btn.innerText = 'متابع'; await addNotification(userId, 'follow', currentUser.uid); } if (viewingProfileUserId === userId) await loadProfileData(userId); }
 
 // ========== التعليقات ==========
-async function openComments(videoId) { currentVideoId = videoId; const panel = document.getElementById('commentsPanel'); const commentsRef = db.ref(`videos/${videoId}/comments`); const snap = await commentsRef.get(); const comments = snap.val() || {}; const container = document.getElementById('commentsList'); container.innerHTML = ''; Object.values(comments).reverse().forEach(c => { const user = allUsers[c.userId] || { username: c.username || 'user', avatarUrl: '' }; const avatarHtml = (user.avatarUrl && user.avatarUrl !== '') ? `<img src="${user.avatarUrl}">` : (user.username?.charAt(0)?.toUpperCase() || '👤'); container.innerHTML += `<div class="comment-item"><div class="comment-avatar">${avatarHtml}</div><div><div class="font-bold">@${user.username}</div><div class="text-sm mt-1">${c.text}</div></div></div>`; }); panel.classList.add('open'); }
+async function openComments(videoId) { currentVideoId = videoId; const panel = document.getElementById('commentsPanel'); const commentsRef = ref(db, `videos/${videoId}/comments`); const snap = await get(commentsRef); const comments = snap.val() || {}; const container = document.getElementById('commentsList'); container.innerHTML = ''; Object.values(comments).reverse().forEach(c => { const user = allUsers[c.userId] || { username: c.username || 'user', avatarUrl: '' }; const avatarHtml = (user.avatarUrl && user.avatarUrl !== '') ? `<img src="${user.avatarUrl}">` : (user.username?.charAt(0)?.toUpperCase() || '👤'); container.innerHTML += `<div class="comment-item"><div class="comment-avatar">${avatarHtml}</div><div><div class="font-bold">@${user.username}</div><div class="text-sm mt-1">${c.text}</div></div></div>`; }); panel.classList.add('open'); }
 function closeComments() { document.getElementById('commentsPanel').classList.remove('open'); }
-async function addComment() { const input = document.getElementById('commentInput'); if (!input.value.trim() || !currentVideoId) return; await db.ref(`videos/${currentVideoId}/comments`).push({ userId: currentUser.uid, username: currentUserData?.username, text: input.value, timestamp: Date.now() }); input.value = ''; openComments(currentVideoId); }
+async function addComment() { const input = document.getElementById('commentInput'); if (!input.value.trim() || !currentVideoId) return; await push(ref(db, `videos/${currentVideoId}/comments`), { userId: currentUser.uid, username: currentUserData?.username, text: input.value, timestamp: Date.now() }); input.value = ''; openComments(currentVideoId); }
 
 // ========== المشاركة ==========
 function openShare(url) { currentShareUrl = url; document.getElementById('sharePanel').classList.add('open'); }
@@ -182,8 +185,8 @@ function downloadVideo() { window.open(currentShareUrl, '_blank'); closeShare();
 function showToast() { const t = document.getElementById('copyToast'); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
 
 // ========== الإشعارات ==========
-async function addNotification(targetUserId, type, fromUserId) { if (targetUserId === fromUserId) return; const fromUser = allUsers[fromUserId] || { username: 'مستخدم' }; const messages = { like: 'أعجب بفيديو الخاص بك', comment: 'علق على فيديو الخاص بك', follow: 'بدأ بمتابعتك', unfollow: 'توقف عن متابعتك' }; await db.ref(`notifications/${targetUserId}`).push({ type, fromUserId, fromUsername: fromUser.username, message: messages[type], timestamp: Date.now(), read: false }); }
-async function openNotifications() { const panel = document.getElementById('notificationsPanel'); const snap = await db.ref(`notifications/${currentUser.uid}`).once('value'); const notifs = snap.val() || {}; const container = document.getElementById('notificationsList'); container.innerHTML = ''; Object.values(notifs).reverse().forEach(n => { container.innerHTML += `<div class="notification-item"><i class="fas ${n.type === 'like' ? 'fa-heart text-red-500' : n.type === 'comment' ? 'fa-comment' : 'fa-user-plus'}"></i><div><div>${n.fromUsername}</div><div class="text-xs opacity-60">${n.message}</div></div></div>`; if (!n.read) db.ref(`notifications/${currentUser.uid}/${Object.keys(notifs).find(k => notifs[k] === n)}/read`).set(true); }); panel.classList.add('open'); }
+async function addNotification(targetUserId, type, fromUserId) { if (targetUserId === fromUserId) return; const fromUser = allUsers[fromUserId] || { username: 'مستخدم' }; const messages = { like: 'أعجب بفيديو الخاص بك', comment: 'علق على فيديو الخاص بك', follow: 'بدأ بمتابعتك', unfollow: 'توقف عن متابعتك' }; await push(ref(db, `notifications/${targetUserId}`), { type, fromUserId, fromUsername: fromUser.username, message: messages[type], timestamp: Date.now(), read: false }); }
+async function openNotifications() { const panel = document.getElementById('notificationsPanel'); const snap = await get(ref(db, `notifications/${currentUser.uid}`)); const notifs = snap.val() || {}; const container = document.getElementById('notificationsList'); container.innerHTML = ''; Object.values(notifs).reverse().forEach(n => { container.innerHTML += `<div class="notification-item"><i class="fas ${n.type === 'like' ? 'fa-heart text-red-500' : n.type === 'comment' ? 'fa-comment' : 'fa-user-plus'}"></i><div><div>${n.fromUsername}</div><div class="text-xs opacity-60">${n.message}</div></div></div>`; if (!n.read) update(ref(db, `notifications/${currentUser.uid}/${Object.keys(notifs).find(k => notifs[k] === n)}/read`), { read: true }); }); panel.classList.add('open'); }
 function closeNotifications() { document.getElementById('notificationsPanel').classList.remove('open'); }
 
 // ========== البحث ==========
@@ -200,7 +203,7 @@ function searchBySound(soundName) { document.getElementById('searchInput').value
 // ========== الملف الشخصي ==========
 async function viewProfile(userId) { if (!userId) return; viewingProfileUserId = userId; await loadProfileData(userId); document.getElementById('profilePanel').classList.add('open'); }
 async function loadProfileData(userId) {
-    const userSnap = await db.ref(`users/${userId}`).get(); const user = userSnap.val(); if (!user) return;
+    const userSnap = await get(ref(db, `users/${userId}`)); const user = userSnap.val(); if (!user) return;
     const avatarDisplay = document.getElementById('profileAvatarDisplay'); if (user.avatarUrl && user.avatarUrl !== '') avatarDisplay.innerHTML = `<img src="${user.avatarUrl}">`; else avatarDisplay.innerHTML = user.username?.charAt(0)?.toUpperCase() || '👤';
     document.getElementById('profileNameDisplay').innerText = user.username || 'مستخدم'; document.getElementById('profileBioDisplay').innerText = user.bio || '';
     document.getElementById('profileFollowing').innerText = Object.keys(user.following || {}).length; document.getElementById('profileFollowers').innerText = Object.keys(user.followers || {}).length;
@@ -214,9 +217,9 @@ function openMyProfile() { if (currentUser) viewProfile(currentUser.uid); }
 function closeProfile() { document.getElementById('profilePanel').classList.remove('open'); viewingProfileUserId = null; }
 function openEditProfile() { document.getElementById('editUsername').value = currentUserData?.username || ''; document.getElementById('editBio').value = currentUserData?.bio || ''; const editAvatar = document.getElementById('editAvatarDisplay'); if (currentUserData?.avatarUrl) editAvatar.innerHTML = `<img src="${currentUserData.avatarUrl}">`; else editAvatar.innerHTML = currentUserData?.username?.charAt(0)?.toUpperCase() || '👤'; document.getElementById('editProfilePanel').classList.add('open'); }
 function closeEditProfile() { document.getElementById('editProfilePanel').classList.remove('open'); }
-async function saveProfile() { const newUsername = document.getElementById('editUsername').value; const newBio = document.getElementById('editBio').value; await db.ref(`users/${currentUser.uid}`).update({ username: newUsername, bio: newBio }); currentUserData.username = newUsername; currentUserData.bio = newBio; closeEditProfile(); if (viewingProfileUserId === currentUser.uid) await loadProfileData(currentUser.uid); renderVideos(); }
+async function saveProfile() { const newUsername = document.getElementById('editUsername').value; const newBio = document.getElementById('editBio').value; await update(ref(db, `users/${currentUser.uid}`), { username: newUsername, bio: newBio }); currentUserData.username = newUsername; currentUserData.bio = newBio; closeEditProfile(); if (viewingProfileUserId === currentUser.uid) await loadProfileData(currentUser.uid); renderVideos(); }
 function changeAvatar() { document.getElementById('avatarInput').click(); }
-async function uploadAvatar(input) { const file = input.files[0]; if (!file) return; const fd = new FormData(); fd.append('file', file); fd.append('upload_preset', UPLOAD_PRESET); const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd }); const data = await res.json(); await db.ref(`users/${currentUser.uid}/avatarUrl`).set(data.secure_url); currentUserData.avatarUrl = data.secure_url; if (viewingProfileUserId === currentUser.uid) await loadProfileData(currentUser.uid); renderVideos(); }
+async function uploadAvatar(input) { const file = input.files[0]; if (!file) return; const fd = new FormData(); fd.append('file', file); fd.append('upload_preset', UPLOAD_PRESET); const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd }); const data = await res.json(); await update(ref(db, `users/${currentUser.uid}`), { avatarUrl: data.secure_url }); currentUserData.avatarUrl = data.secure_url; if (viewingProfileUserId === currentUser.uid) await loadProfileData(currentUser.uid); renderVideos(); }
 function playVideo(url) { window.open(url, '_blank'); }
 
 // ========== الدردشة الخاصة ==========
@@ -226,7 +229,7 @@ async function openConversations() {
     const panel = document.getElementById('conversationsPanel');
     const container = document.getElementById('conversationsList');
     const userId = currentUser.uid;
-    const convSnap = await db.ref(`private_chats/${userId}`).once('value');
+    const convSnap = await get(ref(db, `private_chats/${userId}`));
     const conversations = convSnap.val() || {};
     container.innerHTML = '';
     for (const [otherId, convData] of Object.entries(conversations)) {
@@ -261,7 +264,7 @@ async function loadPrivateMessages(otherUserId) {
     const container = document.getElementById('privateMessagesList');
     container.innerHTML = '<div class="text-center text-gray-400 py-10">جاري التحميل...</div>';
     const chatId = getChatId(currentUser.uid, otherUserId);
-    const messagesSnap = await db.ref(`private_messages/${chatId}`).once('value');
+    const messagesSnap = await get(ref(db, `private_messages/${chatId}`));
     const messages = messagesSnap.val() || {};
     container.innerHTML = '';
     const sortedMessages = Object.entries(messages).sort((a, b) => a[1].timestamp - b[1].timestamp);
@@ -282,9 +285,9 @@ async function sendPrivateMessage() {
     if (!text || !currentChatUserId) return;
     const chatId = getChatId(currentUser.uid, currentChatUserId);
     const message = { senderId: currentUser.uid, senderName: currentUserData?.username, text: text, type: 'text', timestamp: Date.now(), read: false };
-    await db.ref(`private_messages/${chatId}`).push(message);
-    await db.ref(`private_chats/${currentUser.uid}/${currentChatUserId}`).set({ lastMessage: text, lastTimestamp: Date.now(), withUser: currentChatUserId });
-    await db.ref(`private_chats/${currentChatUserId}/${currentUser.uid}`).set({ lastMessage: text, lastTimestamp: Date.now(), withUser: currentUser.uid });
+    await push(ref(db, `private_messages/${chatId}`), message);
+    await set(ref(db, `private_chats/${currentUser.uid}/${currentChatUserId}`), { lastMessage: text, lastTimestamp: Date.now(), withUser: currentChatUserId });
+    await set(ref(db, `private_chats/${currentChatUserId}/${currentUser.uid}`), { lastMessage: text, lastTimestamp: Date.now(), withUser: currentUser.uid });
     input.value = '';
     await loadPrivateMessages(currentChatUserId);
 }
@@ -296,9 +299,9 @@ async function sendChatImage(input) {
     const data = await res.json();
     const chatId = getChatId(currentUser.uid, currentChatUserId);
     const message = { senderId: currentUser.uid, senderName: currentUserData?.username, imageUrl: data.secure_url, type: 'image', timestamp: Date.now(), read: false };
-    await db.ref(`private_messages/${chatId}`).push(message);
-    await db.ref(`private_chats/${currentUser.uid}/${currentChatUserId}`).set({ lastMessage: '📷 صورة', lastTimestamp: Date.now(), withUser: currentChatUserId });
-    await db.ref(`private_chats/${currentChatUserId}/${currentUser.uid}`).set({ lastMessage: '📷 صورة', lastTimestamp: Date.now(), withUser: currentUser.uid });
+    await push(ref(db, `private_messages/${chatId}`), message);
+    await set(ref(db, `private_chats/${currentUser.uid}/${currentChatUserId}`), { lastMessage: '📷 صورة', lastTimestamp: Date.now(), withUser: currentChatUserId });
+    await set(ref(db, `private_chats/${currentChatUserId}/${currentUser.uid}`), { lastMessage: '📷 صورة', lastTimestamp: Date.now(), withUser: currentUser.uid });
     input.value = '';
     await loadPrivateMessages(currentChatUserId);
 }
@@ -317,7 +320,7 @@ function addMessageButtonInProfile(userId) {
     }
 }
 function getChatId(uid1, uid2) { return uid1 < uid2 ? `${uid1}_${uid2}` : `${uid2}_${uid1}`; }
-db.ref(`private_messages`).on('child_added', async (snapshot) => {
+onChildAdded(ref(db, `private_messages`), async (snapshot) => {
     const chatId = snapshot.key;
     if (currentChatUserId && chatId === getChatId(currentUser.uid, currentChatUserId)) await loadPrivateMessages(currentChatUserId);
     if (document.getElementById('conversationsPanel').classList.contains('open')) openConversations();
@@ -351,7 +354,7 @@ async function uploadVideoWithDetails() {
         xhr.upload.onprogress = (e) => { if (e.lengthComputable) { const percent = Math.round((e.loaded / e.total) * 100); progressFill.style.width = `${percent}%`; progressText.innerText = `${percent}%`; } };
         const response = await new Promise((resolve, reject) => { xhr.onload = () => resolve(xhr); xhr.onerror = () => reject(xhr); xhr.send(formData); });
         const result = JSON.parse(response.responseText);
-        await db.ref('videos/').push({ url: result.secure_url, thumbnail: result.secure_url.replace('.mp4', '.jpg'), description, music, visibility, commentsSetting, sender: currentUser.uid, senderName: currentUserData?.username, likes: 0, likedBy: {}, comments: {}, timestamp: Date.now() });
+        await push(ref(db, 'videos'), { url: result.secure_url, thumbnail: result.secure_url.replace('.mp4', '.jpg'), description, music, visibility, commentsSetting, sender: currentUser.uid, senderName: currentUserData?.username, likes: 0, likedBy: {}, comments: {}, timestamp: Date.now() });
         statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> تم رفع الفيديو بنجاح!'; statusDiv.style.color = '#4caf50';
         setTimeout(() => { closeUploadPanel(); renderVideos(); }, 1500);
     } catch (error) { console.error('Upload error:', error); statusDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> فشل الرفع: ' + error.message; statusDiv.style.color = '#ff4444'; progressBar.style.display = 'none'; submitBtn.classList.remove('disabled'); submitBtn.disabled = false; }
@@ -368,12 +371,12 @@ function switchTab(tab) {
 }
 
 // ========== مراقبة المستخدم ==========
-auth.onAuthStateChanged(async (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         currentUser = user; await loadUserData(); checkAdminStatus();
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
-        const presenceRef = db.ref('presence/' + user.uid); presenceRef.set(true); presenceRef.onDisconnect().remove();
+        const presenceRef = ref(db, 'presence/' + user.uid); await set(presenceRef, true); onDisconnect(presenceRef).remove();
     } else {
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('mainApp').style.display = 'none';
