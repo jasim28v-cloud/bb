@@ -21,3 +21,5 @@ export { ref, push, set, onValue, update, get, child };
 // Cloudinary Configuration
 export const CLOUD_NAME = 'dnmpmysk6';
 export const UPLOAD_PRESET = 'rsxdfdgw';
+
+console.log('✅ Firebase initialized');
