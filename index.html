@@ -3,262 +3,815 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>fsex | TikTok Ultra Pro</title>
+    <title>TikToki | منصة فيديوهات قصيرة</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://upload-widget.cloudinary.com/global/all.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "firebase/app": "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js",
+                "firebase/auth": "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js",
+                "firebase/database": "https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"
+            }
+        }
+    </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #000; color: #fff; overflow: hidden; height: 100vh; }
-        
-        /* شاشة تسجيل الدخول الجديدة - تصميم احترافي */
-        .login-screen { position: fixed; inset: 0; z-index: 1000; background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%); display: flex; align-items: center; justify-content: center; }
-        .login-card { background: rgba(0,0,0,0.75); backdrop-filter: blur(25px); border-radius: 48px; padding: 48px 32px; width: 90%; max-width: 420px; text-align: center; border: 1px solid rgba(255,107,107,0.3); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); animation: fadeInUp 0.6s ease; }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* شعار fsex مع قلب أحمر */
-        .login-card h1 { font-size: 52px; font-weight: 900; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; gap: 12px; }
-        .login-card h1 .fsex-text { background: linear-gradient(135deg, #fff, #ff6b6b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .login-card h1 .heart { color: #ff3366; font-size: 48px; animation: heartbeat 1.5s ease infinite; display: inline-block; }
-        @keyframes heartbeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
-        
-        .login-subtitle { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 32px; }
-        
-        /* حقول الإدخال */
-        .input-group { margin-bottom: 20px; text-align: right; }
-        .input-group label { display: block; font-size: 13px; margin-bottom: 8px; color: rgba(255,255,255,0.7); font-weight: 500; }
-        .input-group input { width: 100%; padding: 14px 18px; border-radius: 30px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; font-size: 15px; transition: all 0.3s; }
-        .input-group input:focus { outline: none; border-color: #ff3366; background: rgba(255,51,102,0.1); box-shadow: 0 0 0 3px rgba(255,51,102,0.2); }
-        
-        /* زر تسجيل الدخول الرئيسي */
-        .login-btn { width: 100%; padding: 14px; margin-top: 16px; background: linear-gradient(135deg, #ff3366, #ff6b6b); border: none; border-radius: 40px; color: white; font-weight: bold; font-size: 16px; cursor: pointer; transition: all 0.3s; }
-        .login-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(255,51,102,0.4); }
-        
-        /* الفاصل */
-        .divider { display: flex; align-items: center; text-align: center; margin: 28px 0; color: rgba(255,255,255,0.4); font-size: 13px; }
-        .divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid rgba(255,255,255,0.2); }
-        .divider span { margin: 0 16px; }
-        
-        /* أزرار SSO */
-        .sso-buttons { display: flex; gap: 16px; margin-bottom: 24px; }
-        .sso-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); border-radius: 40px; cursor: pointer; transition: all 0.3s; font-size: 14px; font-weight: 500; color: white; }
-        .sso-btn i { font-size: 20px; }
-        .sso-btn.google-btn:hover { background: rgba(219,68,55,0.2); border-color: #db4437; }
-        .sso-btn.facebook-btn:hover { background: rgba(66,103,178,0.2); border-color: #4267B2; }
-        
-        /* رابط نسيت كلمة السر */
-        .forgot-link { display: block; text-align: center; margin: 20px 0; color: #ff6b6b; text-decoration: none; font-size: 14px; }
-        .forgot-link:hover { text-decoration: underline; }
-        
-        /* رابط التسجيل */
-        .signup-link { text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); font-size: 14px; }
-        .signup-link a { color: #ff3366; font-weight: bold; text-decoration: none; cursor: pointer; }
-        .signup-link a:hover { text-decoration: underline; }
-        
-        /* رسائل الخطأ */
-        .error-msg { color: #ff6b6b; font-size: 12px; text-align: center; margin-top: 12px; }
-        
-        /* باقي أنماط التطبيق (نفسها مع تغيير الألوان) */
-        #mainApp { display: none; height: 100vh; background: #000; position: relative; }
-        .top-bar { position: fixed; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; z-index: 100; background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent); }
-        .logo { display: flex; align-items: center; gap: 8px; }
-        .logo-icon { width: 34px; height: 34px; background: linear-gradient(135deg, #ff3366, #ff6b6b); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 18px; }
-        .logo-text { font-weight: 800; font-size: 18px; }
-        .logo-text span { color: #ff3366; }
-        .top-tabs { display: flex; gap: 20px; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 30px; }
-        .top-tab { background: none; border: none; color: rgba(255,255,255,0.6); font-weight: 500; padding: 6px 12px; cursor: pointer; border-radius: 20px; font-size: 14px; }
-        .top-tab.active { color: #ff3366; background: rgba(255,51,102,0.2); }
-        .top-icons { display: flex; gap: 18px; }
-        .top-icon { background: none; border: none; color: white; font-size: 20px; cursor: pointer; }
-        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* شاشة تسجيل الدخول */
+        .login-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: radial-gradient(circle at 30% 10%, #0f0f1a, #050505);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            background: rgba(15, 15, 26, 0.8);
+            backdrop-filter: blur(20px);
+            border-radius: 32px;
+            padding: 40px 32px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            border: 1px solid rgba(236, 72, 153, 0.3);
+            box-shadow: 0 0 40px rgba(236, 72, 153, 0.2);
+            animation: fadeInUp 0.5s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .login-card h1 {
+            font-size: 42px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ec489a, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 30px;
+        }
+        .login-card input {
+            width: 100%;
+            padding: 14px 18px;
+            margin: 10px 0;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            font-size: 15px;
+        }
+        .login-card input:focus {
+            outline: none;
+            border-color: #ec489a;
+            background: rgba(236, 72, 153, 0.1);
+        }
+        .login-card button {
+            width: 100%;
+            padding: 14px;
+            margin-top: 20px;
+            background: linear-gradient(135deg, #ec489a, #06b6d4);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .login-card button:active { transform: scale(0.98); }
+        .auth-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 60px;
+            padding: 4px;
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            border-radius: 60px;
+            transition: all 0.3s;
+        }
+        .auth-tab.active {
+            background: linear-gradient(135deg, #ec489a, #06b6d4);
+            color: white;
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.5);
+        }
+        .auth-form { display: none; }
+        .auth-form.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .version { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 24px; }
+
+        /* التطبيق الرئيسي */
+        #mainApp { display: none; height: 100vh; background: #000; position: relative; overflow-y: auto; }
+
+        /* شريط علوي */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
+        }
+        .logo-text {
+            font-size: 24px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ec489a, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .top-icons {
+            display: flex;
+            gap: 20px;
+        }
+        .top-icon {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+        }
+        .global-mute {
+            position: fixed;
+            top: 80px;
+            right: 16px;
+            z-index: 100;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
         /* حاوية الفيديوهات */
-        .videos-container { height: 100vh; overflow-y: scroll; scroll-snap-type: y mandatory; scrollbar-width: none; }
+        .videos-container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scrollbar-width: none;
+        }
         .videos-container::-webkit-scrollbar { display: none; }
-        .video-item { height: 100vh; scroll-snap-align: start; position: relative; background: #000; margin-bottom: 2px; }
-        .video-item video { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
-        
+        .video-item {
+            height: 100vh;
+            scroll-snap-align: start;
+            position: relative;
+            background: #000;
+        }
+        .video-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
         /* معلومات الفيديو */
-        .video-info { position: absolute; bottom: 100px; left: 16px; right: 80px; z-index: 20; }
-        .author-info { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
-        .author-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #ff3366, #ff6b6b); display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; border: 2px solid white; overflow: hidden; }
+        .video-info {
+            position: absolute;
+            bottom: 100px;
+            left: 16px;
+            right: 80px;
+            z-index: 20;
+        }
+        .author-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .author-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ec489a, #06b6d4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            cursor: pointer;
+            border: 2px solid white;
+            overflow: hidden;
+        }
         .author-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .author-name { font-weight: bold; font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .follow-btn { background: #ff3366; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; cursor: pointer; border: none; color: white; }
-        .video-caption { font-size: 14px; margin-bottom: 8px; line-height: 1.4; }
-        .video-music { font-size: 12px; opacity: 0.8; display: flex; align-items: center; gap: 6px; cursor: pointer; }
-        .hashtag { color: #ff3366; cursor: pointer; }
-        
+        .author-name {
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .follow-btn {
+            background: #ec489a;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            color: white;
+        }
+        .video-caption {
+            font-size: 14px;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        .video-music {
+            font-size: 12px;
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .hashtag { color: #ec489a; cursor: pointer; }
+        .mention { color: #06b6d4; cursor: pointer; }
+
         /* الأزرار الجانبية */
-        .side-actions { position: absolute; right: 12px; bottom: 120px; display: flex; flex-direction: column; gap: 24px; z-index: 20; }
-        .side-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: white; cursor: pointer; font-size: 11px; }
+        .side-actions {
+            position: absolute;
+            right: 12px;
+            bottom: 120px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            z-index: 20;
+        }
+        .side-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 11px;
+        }
         .side-btn i { font-size: 32px; }
-        .side-btn.active i { color: #ff3366; }
+        .side-btn.active i { color: #ec489a; }
         .side-btn .count { font-weight: bold; }
-        
+
         /* شريط سفلي */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; align-items: center; padding: 12px 0 24px; background: rgba(0,0,0,0.95); backdrop-filter: blur(20px); z-index: 100; border-top: 1px solid rgba(255,255,255,0.1); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 10px; }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 12px 0 24px;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            font-size: 10px;
+        }
         .nav-item i { font-size: 24px; }
-        .nav-item.active { color: #ff3366; transform: translateY(-2px); }
-        .create-btn { width: 52px; height: 52px; background: linear-gradient(135deg, #ff3366, #ff6b6b); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: -28px; cursor: pointer; box-shadow: 0 0 20px rgba(255,51,102,0.5); }
-        
-        /* اللوحات المنبثقة (نفسها) */
-        .share-panel, .comments-panel, .search-panel, .notifications-panel, .profile-panel, .edit-profile-panel, .sounds-panel, .upload-panel, .private-chat-panel, .conversations-panel {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 300; transform: translateX(100%); transition: 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1); overflow-y: auto;
+        .nav-item.active { color: #ec489a; transform: translateY(-2px); }
+        .create-btn {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, #ec489a, #06b6d4);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: -28px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(236, 72, 153, 0.5);
         }
-        .share-panel.open, .comments-panel.open, .search-panel.open, .notifications-panel.open, .profile-panel.open, .edit-profile-panel.open, .sounds-panel.open, .upload-panel.open, .private-chat-panel.open, .conversations-panel.open {
-            transform: translateX(0);
+
+        /* لوحة الرفع */
+        .upload-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 300;
+            transform: translateX(100%);
+            transition: 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            overflow-y: auto;
         }
-        .panel-header { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); position: sticky; top: 0; background: #000; z-index: 10; }
-        .close-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        
-        /* باقي الأنماط مختصرة (نفس السابقة مع ألوان #ff3366) */
+        .upload-panel.open { transform: translateX(0); }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky;
+            top: 0;
+            background: #000;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: white;
+            cursor: pointer;
+        }
         .upload-content { max-width: 500px; margin: 0 auto; padding: 20px; }
-        .video-preview-area { background: #1a1a1a; border-radius: 20px; overflow: hidden; margin-bottom: 24px; cursor: pointer; border: 2px dashed rgba(255,51,102,0.3); }
+        .video-preview-area {
+            background: #1a1a1a;
+            border-radius: 20px;
+            overflow: hidden;
+            margin-bottom: 24px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px dashed rgba(236, 72, 153, 0.3);
+        }
+        .video-preview-area:hover { border-color: #ec489a; background: rgba(236,72,153,0.05); }
+        .preview-placeholder { text-align: center; padding: 60px 20px; }
+        .preview-placeholder i { font-size: 64px; color: #ec489a; margin-bottom: 16px; }
+        .video-preview { width: 100%; max-height: 300px; object-fit: contain; background: #000; display: none; }
         .upload-form { background: #111; border-radius: 20px; padding: 20px; }
-        .form-group input:focus, .form-group textarea:focus { border-color: #ff3366; }
-        .upload-submit-btn { background: linear-gradient(135deg, #ff3366, #ff6b6b); }
-        .progress-fill { background: linear-gradient(90deg, #ff3366, #ff6b6b); }
-        .message-bubble.sent { background: #ff3366; }
-        .loading { display: flex; align-items: center; justify-content: center; height: 100vh; color: #888; gap: 12px; flex-direction: column; }
-        .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,51,102,0.3); border-top-color: #ff3366; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 14px; color: rgba(255,255,255,0.8); }
+        .form-group label i { color: #ec489a; margin-right: 8px; }
+        .form-group textarea, .form-group input { width: 100%; padding: 14px 16px; background: #1a1a2a; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; color: white; }
+        .upload-progress { margin: 20px 0; display: none; }
+        .progress-bar { background: rgba(255,255,255,0.1); border-radius: 30px; height: 8px; overflow: hidden; }
+        .progress-fill { background: linear-gradient(90deg, #ec489a, #ff6b6b); width: 0%; height: 100%; transition: width 0.3s; }
+        .upload-actions { display: flex; gap: 15px; margin-top: 20px; }
+        .cancel-upload-btn, .upload-submit-btn { padding: 14px; border-radius: 30px; font-weight: bold; cursor: pointer; border: none; }
+        .cancel-upload-btn { flex: 1; background: rgba(255,255,255,0.1); color: white; }
+        .upload-submit-btn { flex: 2; background: linear-gradient(135deg, #ec489a, #ff6b6b); color: white; }
+
+        /* صفحة الملف الشخصي */
+        .profile-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 300;
+            transform: translateX(100%);
+            transition: 0.3s;
+            overflow-y: auto;
+        }
+        .profile-panel.open { transform: translateX(0); }
+        .profile-cover {
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #ec489a, #06b6d4);
+            object-fit: cover;
+        }
+        .profile-header {
+            text-align: center;
+            padding: 0 20px 20px;
+            position: relative;
+        }
+        .profile-avatar-large {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            margin: -50px auto 10px;
+            border: 3px solid white;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .profile-avatar-large img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin: 20px 0;
+        }
+        .stat { text-align: center; }
+        .stat-number { font-size: 22px; font-weight: bold; }
+        .stat-label { font-size: 12px; opacity: 0.7; }
+        .xp-bar {
+            width: 100%;
+            max-width: 200px;
+            margin: 10px auto;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            height: 6px;
+        }
+        .xp-fill {
+            background: #ec489a;
+            width: 0%;
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s;
+        }
+        .edit-profile-btn, .logout-btn, .follow-btn, .message-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: white;
+            margin: 0 8px;
+            cursor: pointer;
+        }
+        .follow-btn { background: #ec489a; border: none; }
+        .videos-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            margin-top: 16px;
+        }
+        .video-thumb {
+            aspect-ratio: 9/16;
+            background: #1a1a1a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+        }
+        .video-thumb .views {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.6);
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 12px;
+        }
+
+        /* صفحة الدردشة */
+        .chat-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 350;
+            transform: translateX(100%);
+            transition: 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-panel.open { transform: translateX(0); }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-message {
+            display: flex;
+            gap: 8px;
+            max-width: 85%;
+        }
+        .chat-message.sent { align-self: flex-end; flex-direction: row-reverse; }
+        .message-bubble {
+            background: #1a1a2a;
+            padding: 8px 12px;
+            border-radius: 18px;
+        }
+        .message-bubble.sent { background: #ec489a; }
+        .message-image { max-width: 200px; border-radius: 12px; cursor: pointer; }
+        .chat-input-area {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: #111;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .chat-input-area input {
+            flex: 1;
+            background: #1a1a2a;
+            border: none;
+            border-radius: 30px;
+            padding: 10px 16px;
+            color: white;
+        }
+        .conversations-list {
+            padding: 16px;
+            overflow-y: auto;
+        }
+        .conversation-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+        }
+
+        /* صفحة الأصوات */
+        .sounds-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 350;
+            transform: translateX(100%);
+            transition: 0.3s;
+        }
+        .sounds-panel.open { transform: translateX(0); }
+        .sound-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+        }
+
+        /* صفحة الإشعارات */
+        .notifications-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 350;
+            transform: translateX(100%);
+            transition: 0.3s;
+        }
+        .notifications-panel.open { transform: translateX(0); }
+        .notification-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* صفحة البحث */
+        .search-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 350;
+            transform: translateX(100%);
+            transition: 0.3s;
+        }
+        .search-panel.open { transform: translateX(0); }
+        .search-input {
+            width: calc(100% - 32px);
+            margin: 16px;
+            padding: 12px 16px;
+            background: #1a1a2a;
+            border: none;
+            border-radius: 30px;
+            color: white;
+        }
+        .search-result {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+        }
+
+        .watermark {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 25;
+            pointer-events: none;
+        }
+        .heart-animation {
+            position: fixed;
+            font-size: 80px;
+            color: #ec489a;
+            pointer-events: none;
+            z-index: 1000;
+            animation: heartFloat 0.8s ease-out forwards;
+        }
+        @keyframes heartFloat {
+            0% { transform: scale(0.5) translateY(0); opacity: 1; }
+            100% { transform: scale(1.5) translateY(-100px); opacity: 0; }
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: rgba(255,255,255,0.5);
+        }
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid rgba(236,72,153,0.3);
+            border-top-color: #ec489a;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto;
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.6);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 20;
+        }
     </style>
 </head>
 <body>
 
-<!-- شاشة تسجيل الدخول الجديدة - تصميم احترافي مع قلب أحمر -->
+<!-- شاشة تسجيل الدخول -->
 <div id="loginScreen" class="login-screen">
     <div class="login-card">
-        <h1>
-            <span class="fsex-text">fsex</span>
-            <span class="heart">❤️</span>
-        </h1>
-        <p class="login-subtitle">قم بتسجيل الدخول إلى حسابك</p>
-        
-        <!-- نموذج تسجيل الدخول -->
-        <div id="loginFormArea">
-            <div class="input-group">
-                <label>البريد الإلكتروني</label>
-                <input type="email" id="loginEmail" placeholder="example@email.com">
-            </div>
-            <div class="input-group">
-                <label>كلمة المرور</label>
-                <input type="password" id="loginPassword" placeholder="••••••••">
-            </div>
-            <button class="login-btn" onclick="login()">تسجيل الدخول</button>
-            <div id="loginMsg" class="error-msg"></div>
+        <h1>TikToki ❤️</h1>
+        <div class="auth-tabs">
+            <button class="auth-tab active" onclick="switchAuth('login')">تسجيل الدخول</button>
+            <button class="auth-tab" onclick="switchAuth('register')">إنشاء حساب</button>
         </div>
-        
-        <div class="divider"><span>أو</span></div>
-        
-        <!-- أزرار SSO -->
-        <div class="sso-buttons">
-            <div class="sso-btn google-btn" onclick="loginWithGoogle()">
-                <i class="fab fa-google"></i>
-                <span>Google</span>
-            </div>
-            <div class="sso-btn facebook-btn" onclick="loginWithFacebook()">
-                <i class="fab fa-facebook-f"></i>
-                <span>Facebook</span>
-            </div>
+        <div id="loginForm" class="auth-form active">
+            <input type="email" id="loginEmail" placeholder="البريد الإلكتروني">
+            <input type="password" id="loginPassword" placeholder="كلمة المرور">
+            <button onclick="login()">دخول</button>
+            <div id="loginMsg" class="text-red-500 text-sm text-center mt-3"></div>
         </div>
-        
-        <a href="#" class="forgot-link" onclick="forgotPassword()">نسيت كلمة السر؟</a>
-        
-        <div class="signup-link">
-            ليس لديك حساب؟ <a onclick="showRegisterForm()">سجل الآن</a>
+        <div id="registerForm" class="auth-form">
+            <input type="text" id="regName" placeholder="اسم المستخدم">
+            <input type="email" id="regEmail" placeholder="البريد الإلكتروني">
+            <input type="password" id="regPass" placeholder="كلمة المرور (6 أحرف)">
+            <button onclick="register()">إنشاء حساب</button>
+            <div id="regMsg" class="text-red-500 text-sm text-center mt-3"></div>
         </div>
-    </div>
-</div>
-
-<!-- نموذج إنشاء حساب (يظهر عند الضغط على سجل الآن) -->
-<div id="registerScreen" class="login-screen" style="display: none;">
-    <div class="login-card">
-        <h1>
-            <span class="fsex-text">fsex</span>
-            <span class="heart">❤️</span>
-        </h1>
-        <p class="login-subtitle">إنشاء حساب جديد</p>
-        
-        <div class="input-group">
-            <label>اسم المستخدم</label>
-            <input type="text" id="regName" placeholder="username">
-        </div>
-        <div class="input-group">
-            <label>البريد الإلكتروني</label>
-            <input type="email" id="regEmail" placeholder="example@email.com">
-        </div>
-        <div class="input-group">
-            <label>كلمة المرور</label>
-            <input type="password" id="regPass" placeholder="•••••••• (6 أحرف على الأقل)">
-        </div>
-        <button class="login-btn" onclick="register()">إنشاء حساب</button>
-        <div id="regMsg" class="error-msg"></div>
-        
-        <div class="divider"><span>أو</span></div>
-        
-        <div class="sso-buttons">
-            <div class="sso-btn google-btn" onclick="loginWithGoogle()">
-                <i class="fab fa-google"></i>
-                <span>Google</span>
-            </div>
-            <div class="sso-btn facebook-btn" onclick="loginWithFacebook()">
-                <i class="fab fa-facebook-f"></i>
-                <span>Facebook</span>
-            </div>
-        </div>
-        
-        <div class="signup-link">
-            لديك حساب بالفعل؟ <a onclick="showLoginForm()">تسجيل الدخول</a>
-        </div>
+        <div class="version">الإصدار 4.0 | مارس 2026</div>
     </div>
 </div>
 
 <!-- التطبيق الرئيسي -->
 <div id="mainApp">
     <div class="top-bar">
-        <div class="logo"><div class="logo-icon">f</div><span class="logo-text">fsex<span>❤️</span></span></div>
-        <div class="top-tabs">
-            <button class="top-tab" onclick="switchFeed('following')">متابَعين</button>
-            <button class="top-tab active" onclick="switchFeed('forYou')">لك</button>
-        </div>
+        <div class="logo-text">TikToki ❤️</div>
         <div class="top-icons">
             <i class="fas fa-search top-icon" onclick="openSearch()"></i>
             <i class="fas fa-music top-icon" onclick="openSounds()"></i>
+            <i class="fas fa-bell top-icon" onclick="openNotifications()"></i>
         </div>
     </div>
+    <div class="global-mute" onclick="toggleGlobalMute()"><i class="fas fa-volume-up" id="globalMuteIcon"></i></div>
 
-    <div class="videos-container" id="videosContainer"><div class="loading"><div class="spinner"></div><span>جاري التحميل...</span></div></div>
+    <div class="videos-container" id="videosContainer">
+        <div class="loading"><div class="spinner"></div><span>جاري التحميل...</span></div>
+    </div>
 
     <div class="bottom-nav">
         <button class="nav-item active" onclick="switchTab('home')"><i class="fas fa-home"></i><span>الرئيسية</span></button>
-        <button class="nav-item" onclick="switchTab('search')"><i class="fas fa-search"></i><span>بحث</span></button>
-        <div class="create-btn" onclick="openUploadPanel()"><i class="fas fa-plus"></i></div>
-        <button class="nav-item" onclick="openConversations()"><i class="fas fa-envelope"></i><span>الرسائل</span></button>
+        <button class="nav-item" onclick="openUploadPanel()"><i class="fas fa-plus-circle"></i><span>رفع</span></button>
+        <button class="nav-item" onclick="openMessages()"><i class="fas fa-comment"></i><span>الرسائل</span></button>
         <button class="nav-item" onclick="openMyProfile()"><i class="fas fa-user"></i><span>الملف</span></button>
     </div>
 
-    <div id="copyToast" class="copy-toast">✅ تم نسخ الرابط</div>
+    <!-- لوحة الرفع -->
+    <div id="uploadPanel" class="upload-panel">
+        <div class="panel-header"><h3><i class="fas fa-upload ml-2"></i> رفع فيديو جديد</h3><button class="close-btn" onclick="closeUploadPanel()"><i class="fas fa-times"></i></button></div>
+        <div class="upload-content">
+            <div class="video-preview-area" onclick="document.getElementById('videoFileInput').click()">
+                <div class="preview-placeholder"><i class="fas fa-cloud-upload-alt"></i><p>اضغط لاختيار فيديو</p><span class="preview-hint">MP4, MOV, WebM - حتى 100MB</span></div>
+                <video id="videoPreview" class="video-preview" controls></video>
+            </div>
+            <input type="file" id="videoFileInput" accept="video/*" style="display:none" onchange="selectVideoFile(this)">
+            <div class="upload-form">
+                <div class="form-group"><label><i class="fas fa-pen"></i> وصف الفيديو</label><textarea id="videoDescription" rows="3" placeholder="اكتب وصفاً... استخدم # للهاشتاقات أو @ للإشارة" oninput="showSuggestions()"></textarea><div id="suggestions" class="flex flex-wrap gap-2 mt-2"></div></div>
+                <div class="form-group"><label><i class="fas fa-music"></i> اسم الصوت</label><input type="text" id="videoMusic" placeholder="مثال: Original Sound - أو اسم أغنية"></div>
+                <div class="upload-progress" id="uploadProgressBar"><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div><div class="text-center text-sm mt-2 text-[#ec489a]" id="progressText">0%</div></div>
+                <div class="upload-actions"><button class="cancel-upload-btn" onclick="closeUploadPanel()">إلغاء</button><button class="upload-submit-btn" id="uploadSubmitBtn" onclick="uploadVideo()">رفع الفيديو</button></div>
+                <div id="uploadStatus" class="text-center mt-4 text-sm"></div>
+            </div>
+        </div>
+    </div>
 
-    <!-- باقي اللوحات (نفسها) -->
-    <div id="sharePanel" class="share-panel"><div class="panel-header"><h3>مشاركة</h3><button class="close-btn" onclick="closeShare()"><i class="fas fa-times"></i></button></div><div class="share-option" onclick="copyLink()"><i class="fas fa-link text-blue-400"></i><span>نسخ الرابط</span></div><div class="share-option" onclick="shareToWhatsApp()"><i class="fab fa-whatsapp text-green-500"></i><span>WhatsApp</span></div><div class="share-option" onclick="shareToTelegram()"><i class="fab fa-telegram text-blue-400"></i><span>Telegram</span></div><div class="share-option" onclick="downloadVideo()"><i class="fas fa-download"></i><span>تنزيل</span></div></div>
-    <div id="commentsPanel" class="comments-panel"><div class="panel-header"><h3>التعليقات</h3><button class="close-btn" onclick="closeComments()"><i class="fas fa-times"></i></button></div><div id="commentsList" class="p-4"></div><div class="add-comment p-4"><input type="text" id="commentInput" placeholder="أضف تعليقاً..."><button onclick="addComment()">نشر</button></div></div>
-    <div id="searchPanel" class="search-panel"><div class="panel-header"><h3>بحث</h3><button class="close-btn" onclick="closeSearch()"><i class="fas fa-times"></i></button></div><div class="p-4"><input type="text" id="searchInput" class="search-input" placeholder="بحث..." onkeyup="searchAll()"></div><div id="searchResults" class="p-4"></div></div>
-    <div id="soundsPanel" class="sounds-panel"><div class="panel-header"><h3>الأصوات الشائعة</h3><button class="close-btn" onclick="closeSounds()"><i class="fas fa-times"></i></button></div><div id="soundsList" class="p-2"></div></div>
-    <div id="notificationsPanel" class="notifications-panel"><div class="panel-header"><h3>الإشعارات</h3><button class="close-btn" onclick="closeNotifications()"><i class="fas fa-times"></i></button></div><div id="notificationsList" class="p-4"></div></div>
-    <div id="uploadPanel" class="upload-panel"><div class="panel-header"><h3><i class="fas fa-upload ml-2"></i> رفع فيديو جديد</h3><button class="close-btn" onclick="closeUploadPanel()"><i class="fas fa-times"></i></button></div><div class="upload-content"><div class="video-preview-area" onclick="document.getElementById('videoFileInput').click()"><div class="preview-placeholder"><i class="fas fa-cloud-upload-alt"></i><p>اضغط لاختيار فيديو</p><span class="preview-hint">MP4, MOV, WebM - حتى 100MB</span></div><video id="videoPreview" class="video-preview" controls></video></div><input type="file" id="videoFileInput" accept="video/*" style="display:none" onchange="selectVideoFile(this)"><div class="upload-form"><div class="form-group"><label><i class="fas fa-pen"></i> وصف الفيديو</label><textarea id="videoDescription" rows="3" placeholder="اكتب وصفاً للفيديو... استخدم # للهاشتاقات" oninput="showHashtagSuggestions()"></textarea><div id="hashtagSuggestions" class="hashtag-suggestions"></div></div><div class="form-group"><label><i class="fas fa-music"></i> اسم المقطع / الصوت</label><input type="text" id="videoMusic" placeholder="مثال: Original Sound - أو اسم أغنية" oninput="showMusicSuggestions()"><div id="musicSuggestions" class="music-suggestions"></div></div><div class="form-row"><div class="form-group half"><label><i class="fas fa-users"></i> الرؤية</label><select id="videoVisibility"><option value="public">عام (الكل يشاهده)</option><option value="private">خاص (المتابعون فقط)</option></select></div><div class="form-group half"><label><i class="fas fa-comment"></i> التعليقات</label><select id="videoComments"><option value="all">الكل يمكنه التعليق</option><option value="followers">المتابعون فقط</option><option value="none">تعطيل التعليقات</option></select></div></div><div class="upload-progress" id="uploadProgressBar" style="display:none"><div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div><div class="progress-text" id="progressText">0%</div></div><div class="upload-actions"><button class="cancel-upload-btn" onclick="closeUploadPanel()">إلغاء</button><button class="upload-submit-btn" id="uploadSubmitBtn" onclick="uploadVideoWithDetails()">رفع الفيديو</button></div><div id="uploadStatus" class="upload-status"></div></div></div></div>
-    <div id="profilePanel" class="profile-panel"><div class="back-btn" onclick="closeProfile()"><i class="fas fa-arrow-right"></i></div><div class="profile-header"><div class="profile-avatar-large" id="profileAvatarDisplay" onclick="changeAvatar()">👤</div><h2 id="profileNameDisplay" class="mt-4 text-xl font-bold"></h2><p id="profileBioDisplay" class="text-sm opacity-70 mt-1"></p><div class="profile-stats"><div class="stat"><div class="stat-number" id="profileFollowing">0</div><div class="stat-label">يتابع</div></div><div class="stat"><div class="stat-number" id="profileFollowers">0</div><div class="stat-label">متابع</div></div><div class="stat"><div class="stat-number" id="profileLikes">0</div><div class="stat-label">إجمالي الإعجابات</div></div></div><div id="profileActions"></div></div><div class="p-4"><h4 class="mb-3 font-bold">فيديوهاتي</h4><div id="profileVideosList" class="videos-grid"></div></div></div>
-    <div id="editProfilePanel" class="edit-profile-panel"><div class="panel-header"><h3>تعديل الملف الشخصي</h3><button class="close-btn" onclick="closeEditProfile()"><i class="fas fa-times"></i></button></div><div class="avatar-upload text-center p-6" onclick="changeAvatar()"><div class="profile-avatar-large" id="editAvatarDisplay">👤</div><p class="text-xs text-gray-400 mt-2">اضغط لتغيير الصورة</p></div><input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(this)"><div class="p-4"><input type="text" id="editUsername" class="edit-input" placeholder="اسم المستخدم"><textarea id="editBio" class="edit-input mt-3" rows="3" placeholder="السيرة الذاتية"></textarea><button onclick="saveProfile()" class="save-btn">حفظ التغييرات</button></div></div>
-    <div id="privateChatPanel" class="private-chat-panel"><div class="panel-header"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-r from-[#ff3366] to-[#ff6b6b] flex items-center justify-center" id="chatAvatarDisplay">👤</div><h3 id="chatUserName">محادثة خاصة</h3></div><button class="close-btn" onclick="closePrivateChat()"><i class="fas fa-times"></i></button></div><div id="privateMessagesList" class="private-messages-list"></div><div class="private-chat-input"><div class="chat-attachment" onclick="document.getElementById('chatImageInput').click()"><i class="fas fa-image"></i></div><input type="file" id="chatImageInput" accept="image/*" style="display:none" onchange="sendChatImage(this)"><input type="text" id="privateMessageInput" placeholder="اكتب رسالة..." class="flex-1"><button onclick="sendPrivateMessage()" class="send-btn"><i class="fas fa-paper-plane"></i></button></div></div>
-    <div id="conversationsPanel" class="conversations-panel"><div class="panel-header"><h3>المحادثات الخاصة</h3><button class="close-btn" onclick="closeConversations()"><i class="fas fa-times"></i></button></div><div id="conversationsList" class="conversations-list"></div></div>
+    <!-- صفحة الملف الشخصي -->
+    <div id="profilePanel" class="profile-panel">
+        <div class="back-btn" onclick="closeProfile()"><i class="fas fa-arrow-right"></i></div>
+        <div id="profileCover" class="profile-cover" style="background: linear-gradient(135deg, #ec489a, #06b6d4);"></div>
+        <div class="profile-header">
+            <div class="profile-avatar-large" id="profileAvatarDisplay" onclick="changeAvatar()">👤</div>
+            <h2 id="profileNameDisplay" class="mt-2"></h2>
+            <p id="profileBioDisplay" class="text-sm opacity-70"></p>
+            <div id="xpBar" class="xp-bar"><div id="xpFill" class="xp-fill"></div></div>
+            <div class="profile-stats">
+                <div class="stat"><div class="stat-number" id="profileFollowing">0</div><div class="stat-label">يتابع</div></div>
+                <div class="stat"><div class="stat-number" id="profileFollowers">0</div><div class="stat-label">متابع</div></div>
+                <div class="stat"><div class="stat-number" id="profileLikes">0</div><div class="stat-label">إجمالي الإعجابات</div></div>
+                <div class="stat"><div class="stat-number" id="profileLevel">1</div><div class="stat-label">المستوى</div></div>
+            </div>
+            <div id="profileActions"></div>
+        </div>
+        <div class="p-4"><h4 class="mb-3 font-bold">فيديوهاتي</h4><div id="profileVideosList" class="videos-grid"></div></div>
+    </div>
+
+    <!-- لوحة تعديل الملف الشخصي -->
+    <div id="editProfilePanel" class="profile-panel" style="transform:translateX(100%)">
+        <div class="back-btn" onclick="closeEditProfile()"><i class="fas fa-arrow-right"></i></div>
+        <div class="profile-header"><div class="profile-avatar-large" id="editAvatarDisplay" onclick="changeAvatar()">👤</div><p class="text-xs text-gray-400 mt-2">اضغط لتغيير الصورة</p></div>
+        <input type="file" id="avatarInput" accept="image/*" style="display:none" onchange="uploadAvatar(this)">
+        <div class="p-4">
+            <input type="text" id="editUsername" class="w-full p-3 rounded-xl bg-[#1a1a2a] border-none text-white mb-3" placeholder="اسم المستخدم">
+            <textarea id="editBio" class="w-full p-3 rounded-xl bg-[#1a1a2a] border-none text-white" rows="3" placeholder="السيرة الذاتية"></textarea>
+            <div class="mb-3">
+                <label class="text-sm text-gray-400">صورة الغلاف</label>
+                <div class="w-full h-32 bg-[#1a1a2a] rounded-xl mt-1 cursor-pointer overflow-hidden" onclick="document.getElementById('coverInput').click()">
+                    <img id="coverPreview" class="w-full h-full object-cover">
+                </div>
+                <input type="file" id="coverInput" accept="image/*" style="display:none" onchange="uploadCover(this)">
+            </div>
+            <button onclick="saveProfile()" class="w-full mt-4 bg-gradient-to-r from-[#ec489a] to-[#06b6d4] text-white p-3 rounded-xl font-bold">حفظ</button>
+        </div>
+    </div>
+
+    <!-- صفحة الدردشة -->
+    <div id="chatPanel" class="chat-panel">
+        <div class="panel-header"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full bg-gradient-to-r from-pink-500 to-cyan-500 flex items-center justify-center" id="chatAvatar">👤</div><h3 id="chatUserName">محادثة</h3></div><button class="close-btn" onclick="closeChat()"><i class="fas fa-times"></i></button></div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input-area">
+            <div class="cursor-pointer text-2xl" onclick="document.getElementById('chatImageInput').click()"><i class="fas fa-image"></i></div>
+            <input type="file" id="chatImageInput" accept="image/*" style="display:none" onchange="sendChatImage(this)">
+            <input type="text" id="chatMessageInput" placeholder="اكتب رسالة...">
+            <button onclick="sendChatMessage()" class="bg-gradient-to-r from-pink-500 to-cyan-500 text-white px-4 rounded-full"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- قائمة المحادثات -->
+    <div id="conversationsPanel" class="chat-panel">
+        <div class="panel-header"><h3>المحادثات</h3><button class="close-btn" onclick="closeConversations()"><i class="fas fa-times"></i></button></div>
+        <div id="conversationsList" class="conversations-list"></div>
+    </div>
+
+    <!-- صفحة الأصوات -->
+    <div id="soundsPanel" class="sounds-panel">
+        <div class="panel-header"><h3>الأصوات الشائعة</h3><button class="close-btn" onclick="closeSounds()"><i class="fas fa-times"></i></button></div>
+        <div id="soundsList"></div>
+    </div>
+
+    <!-- صفحة الإشعارات -->
+    <div id="notificationsPanel" class="notifications-panel">
+        <div class="panel-header"><h3>الإشعارات</h3><button class="close-btn" onclick="closeNotifications()"><i class="fas fa-times"></i></button></div>
+        <div id="notificationsList"></div>
+    </div>
+
+    <!-- صفحة البحث -->
+    <div id="searchPanel" class="search-panel">
+        <div class="panel-header"><h3>بحث</h3><button class="close-btn" onclick="closeSearch()"><i class="fas fa-times"></i></button></div>
+        <input type="text" id="searchInput" class="search-input" placeholder="بحث عن مستخدمين، هاشتاقات، فيديوهات..." onkeyup="searchAll()">
+        <div id="searchResults"></div>
+    </div>
 </div>
 
-<script src="firebase-config.js"></script>
-<script src="script.js"></script>
+<script type="module" src="firebase-config.js"></script>
+<script type="module" src="script.js"></script>
 </body>
 </html>
